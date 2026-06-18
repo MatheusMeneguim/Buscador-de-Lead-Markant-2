@@ -15,10 +15,10 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true })
 
 // Antes de salvar, criptografa a senha
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next()
-  this.password = await bcrypt.hash(this.password, 12)
-  next()
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return
+  const salt = await bcrypt.genSalt(12)
+  this.password = await bcrypt.hash(this.password, salt)
 })
 
 // Método para comparar senha digitada com a senha criptografada
