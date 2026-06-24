@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Box } from '@mui/material'
 import { LeadProvider } from './contexts/LeadContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import FormBusca from './components/FormBusca'
 import TabelaLeads from './components/TabelaLeads'
 import Historico from './components/Historico'
 import BotaoExportar from './components/BotaoExportar'
+import Login from './components/Login'
 
 function ParticleCanvas() {
   const canvasRef = useRef(null)
@@ -76,8 +78,9 @@ const s = {
   footerTitle: { fontFamily: 'Space Grotesk, sans-serif', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#F9F9F9', marginBottom: 16, marginTop: 0 },
 }
 
-export default function App() {
+function BuscadorApp() {
   const [menuAberto, setMenuAberto] = useState(false)
+  const { username, logout } = useAuth()
 
   return (
     <LeadProvider>
@@ -101,11 +104,15 @@ export default function App() {
           </ul>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <a href="https://wa.me/5514998435234?text=Olá%2C%20vim%20pelo%20site%20da%20Markant%20e%20quero%20solicitar%20contato."
-              target="_blank" rel="noopener noreferrer" className="nav-cta"
-              style={{ backgroundColor: '#D9E021', color: '#2B2A29', fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 13, padding: '10px 16px', borderRadius: 6, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-              Solicitar Contato
-            </a>
+            <span style={{ color: '#5D5E5D', fontSize: 13, fontFamily: 'Lexend, sans-serif' }} className="nav-cta">
+              Olá, {username}
+            </span>
+            <button
+              onClick={logout}
+              className="nav-cta"
+              style={{ backgroundColor: 'transparent', color: '#D9E021', border: '1px solid rgba(217,224,33,0.4)', fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 13, padding: '10px 16px', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              Sair
+            </button>
 
             <button onClick={() => setMenuAberto(true)} className="nav-toggle"
               aria-label="Abrir menu"
@@ -125,17 +132,15 @@ export default function App() {
           backgroundColor: '#2B2A29',
           display: 'flex', flexDirection: 'column',
         }}>
-          {/* Topo do overlay */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', height: 72, borderBottom: '1px solid rgba(249,249,249,0.07)' }}>
             <a href="https://markant.com.br" onClick={() => setMenuAberto(false)}>
               <img src="/Logo_padrao_amarelo_branco.png" alt="Markant" style={{ width: 120, height: 'auto' }} />
             </a>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <a href="https://wa.me/5514998435234?text=Olá%2C%20vim%20pelo%20site%20da%20Markant%20e%20quero%20solicitar%20contato."
-                target="_blank" rel="noopener noreferrer"
-                style={{ backgroundColor: '#D9E021', color: '#2B2A29', fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 13, padding: '10px 16px', borderRadius: 6, textDecoration: 'none' }}>
-                Solicitar Contato
-              </a>
+              <button onClick={() => { setMenuAberto(false); logout(); }}
+                style={{ backgroundColor: '#D9E021', color: '#2B2A29', border: 'none', fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 13, padding: '10px 16px', borderRadius: 6, cursor: 'pointer' }}>
+                Sair
+              </button>
               <button onClick={() => setMenuAberto(false)} aria-label="Fechar menu"
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#F9F9F9', fontSize: 28, lineHeight: 1, padding: 4 }}>
                 ✕
@@ -143,7 +148,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Links */}
           <nav style={{ padding: '24px 0', flex: 1 }}>
             {navLinks.map(item => (
               <a key={item.label} href={item.href}
@@ -174,7 +178,7 @@ export default function App() {
           .nav-toggle { display: none !important; }
         }
       `}</style>
-      
+
       {/* HERO */}
       <section style={{ position: 'relative', padding: 'clamp(40px, 6vw, 60px) 0 clamp(32px, 5vw, 48px)', overflow: 'hidden', borderBottom: '1px solid rgba(249,249,249,0.07)' }}>
         <ParticleCanvas />
@@ -344,5 +348,23 @@ export default function App() {
       </footer>
 
     </LeadProvider>
+  )
+}
+
+function ConteudoComLogin() {
+  const { estaLogado } = useAuth()
+
+  if (!estaLogado) {
+    return <Login />
+  }
+
+  return <BuscadorApp />
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <ConteudoComLogin />
+    </AuthProvider>
   )
 }
