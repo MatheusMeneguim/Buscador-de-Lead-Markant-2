@@ -1,30 +1,67 @@
 import { useMemo, useState } from 'react'
 import {
-  Box,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Typography,
-  MenuItem,
-  TextField,
-  Chip,
-  Link,
+  Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Paper, Typography, MenuItem, TextField, Chip, Link, IconButton,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, Alert,
 } from '@mui/material'
+import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
 import { useLeads } from '../contexts/LeadContext'
 
 function TabelaLeads() {
-  const { leads, loading, buscaAtual } = useLeads()
+  const { leads, loading, buscaAtual, editarLead, deletarLead } = useLeads()
   const [filtroAvaliacao, setFiltroAvaliacao] = useState(0)
 
-  // useMemo: só recalcula quando leads ou filtroAvaliacao mudam
+  // Estado do dialog de edição
+  const [leadEditando, setLeadEditando] = useState(null)
+  const [campos, setCampos] = useState({})
+  const [erroEdicao, setErroEdicao] = useState(null)
+
+  // Estado do dialog de confirmação de exclusão
+  const [leadDeletando, setLeadDeletando] = useState(null)
+
   const leadsFiltrados = useMemo(() => {
     if (filtroAvaliacao === 0) return leads
     return leads.filter((lead) => (lead.rating || 0) >= filtroAvaliacao)
   }, [leads, filtroAvaliacao])
+
+  function abrirEdicao(lead) {
+    setLeadEditando(lead)
+    setCampos({
+      title: lead.title,
+      address: lead.address,
+      phone: lead.phone || '',
+      rating: lead.rating || '',
+      website: lead.website || '',
+    })
+    setErroEdicao(null)
+  }
+
+  async function salvarEdicao() {
+    if (!campos.title.trim() || !campos.address.trim()) {
+      setErroEdicao('Nome e endereço são obrigatórios.')
+      return
+    }
+
+    const resultado = await editarLead(leadEditando._id, {
+      title: campos.title,
+      address: campos.address,
+      phone: campos.phone || null,
+      rating: campos.rating ? Number(campos.rating) : null,
+      website: campos.website || null,
+    })
+
+    if (resultado.sucesso) {
+      setLeadEditando(null)
+    } else {
+      setErroEdicao(resultado.erro)
+    }
+  }
+
+  async function confirmarExclusao() {
+    await deletarLead(leadDeletando._id)
+    setLeadDeletando(null)
+  }
 
   if (loading) {
     return (
@@ -38,7 +75,7 @@ function TabelaLeads() {
 
   return (
     <Box sx={{ padding: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h6" fontWeight={600}>
             Resultados para "{buscaAtual.nicho}" em {buscaAtual.cidade}
@@ -72,11 +109,12 @@ function TabelaLeads() {
               <TableCell><strong>Telefone</strong></TableCell>
               <TableCell><strong>Avaliação</strong></TableCell>
               <TableCell><strong>Site</strong></TableCell>
+              <TableCell><strong>Ações</strong></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {leadsFiltrados.map((lead) => (
-              <TableRow key={lead.place_id} hover>
+              <TableRow key={lead._id || lead.place_id} hover>
                 <TableCell>{lead.title}</TableCell>
                 <TableCell>{lead.address}</TableCell>
                 <TableCell>
@@ -94,11 +132,60 @@ function TabelaLeads() {
                     </Link>
                   ) : '—'}
                 </TableCell>
+                <TableCell>
+                  {lead._id && (
+                    <>
+                      <IconButton size="small" onClick={() => abrirEdicao(lead)}>
+                        <EditIcon fontSize="small" sx={{ color: '#D9E021' }} />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => setLeadDeletando(lead)}>
+                        <DeleteIcon fontSize="small" sx={{ color: '#e57373' }} />
+                      </IconButton>
+                    </>
+                  )}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Dialog de Edição — RF4 */}
+      <Dialog open={!!leadEditando} onClose={() => setLeadEditando(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>Editar Lead</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <TextField label="Nome" value={campos.title || ''} onChange={(e) => setCampos((p) => ({ ...p, title: e.target.value }))} fullWidth size="small" />
+            <TextField label="Endereço" value={campos.address || ''} onChange={(e) => setCampos((p) => ({ ...p, address: e.target.value }))} fullWidth size="small" />
+            <TextField label="Telefone" value={campos.phone || ''} onChange={(e) => setCampos((p) => ({ ...p, phone: e.target.value }))} fullWidth size="small" />
+            <TextField label="Avaliação" type="number" value={campos.rating || ''} onChange={(e) => setCampos((p) => ({ ...p, rating: e.target.value }))} fullWidth size="small" />
+            <TextField label="Site" value={campos.website || ''} onChange={(e) => setCampos((p) => ({ ...p, website: e.target.value }))} fullWidth size="small" />
+            {erroEdicao && <Alert severity="error">{erroEdicao}</Alert>}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLeadEditando(null)}>Cancelar</Button>
+          <Button onClick={salvarEdicao} variant="contained" sx={{ backgroundColor: '#D9E021', color: '#2B2A29' }}>
+            Salvar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog de Confirmação de Exclusão — RF5 */}
+      <Dialog open={!!leadDeletando} onClose={() => setLeadDeletando(null)}>
+        <DialogTitle>Confirmar exclusão</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Tem certeza que deseja excluir o lead <strong>{leadDeletando?.title}</strong>? Essa ação não pode ser desfeita.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLeadDeletando(null)}>Cancelar</Button>
+          <Button onClick={confirmarExclusao} variant="contained" color="error">
+            Excluir
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }
