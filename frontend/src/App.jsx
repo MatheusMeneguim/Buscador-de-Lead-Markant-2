@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Box } from '@mui/material'
-import { LeadProvider } from './contexts/LeadContext'
+import { LeadProvider, useLeads } from './contexts/LeadContext'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import FormBusca from './components/FormBusca'
 import TabelaLeads from './components/TabelaLeads'
 import Historico from './components/Historico'
 import BotaoExportar from './components/BotaoExportar'
 import Login from './components/Login'
+import FormNovoLead from './components/FormNovoLead'
 
 function ParticleCanvas() {
   const canvasRef = useRef(null)
@@ -76,6 +77,12 @@ const s = {
   btnPrimary: { display: 'inline-block', backgroundColor: '#D9E021', color: '#2B2A29', fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 13, padding: '10px 20px', borderRadius: 6, textDecoration: 'none' },
   btnOutline: { display: 'inline-block', border: '1px solid rgba(249,249,249,0.2)', color: '#F9F9F9', fontFamily: 'Space Grotesk, sans-serif', fontWeight: 600, fontSize: 13, padding: '10px 20px', borderRadius: 6, textDecoration: 'none' },
   footerTitle: { fontFamily: 'Space Grotesk, sans-serif', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#F9F9F9', marginBottom: 16, marginTop: 0 },
+}
+
+// Componente interno — usa useLeads() já dentro do LeadProvider
+function ConteudoBusca() {
+  const { buscaAtual } = useLeads()
+  return <FormNovoLead nicho={buscaAtual.nicho} cidade={buscaAtual.cidade} />
 }
 
 function BuscadorApp() {
@@ -209,6 +216,7 @@ function BuscadorApp() {
             Insira os dados da busca
           </h2>
           <FormBusca />
+          <ConteudoBusca />
         </div>
         <Historico />
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, mb: 1 }}>
