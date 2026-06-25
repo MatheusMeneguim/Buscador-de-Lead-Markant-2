@@ -29,16 +29,16 @@ router.post('/login', limiteLogin, async (req, res) => {
     // Busca o usuário no banco
     const usuario = await User.findOne({ username })
     if (!usuario) {
-  log('LOGIN_FALHOU', `Usuário não encontrado: ${username}`)
-  return res.status(401).json({ error: 'Usuário ou senha inválidos.' })
-}
+      log('LOGIN_FALHOU', `Usuário não encontrado: ${username}`)
+      return res.status(401).json({ error: 'Usuário ou senha inválidos.' })
+    }
 
     // Verifica a senha
     const senhaCorreta = await usuario.compararSenha(password)
     if (!senhaCorreta) {
-  log('LOGIN_FALHOU', `Senha incorreta para: ${username}`)
-  return res.status(401).json({ error: 'Usuário ou senha inválidos.' })
-}
+      log('LOGIN_FALHOU', `Senha incorreta para: ${username}`)
+      return res.status(401).json({ error: 'Usuário ou senha inválidos.' })
+    }
 
     // Gera o token JWT
     const token = jwt.sign(
