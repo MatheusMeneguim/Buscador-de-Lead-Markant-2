@@ -3,11 +3,12 @@ import { Box, TextField, Button, Alert, Typography } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import { useLeads } from '../contexts/LeadContext'
 
-function FormNovoLead({ nicho, cidade, onSucesso }) {
+function FormNovoLead({ nicho, cidade }) {
   const { criarLead } = useLeads()
   const [aberto, setAberto] = useState(false)
   const [campos, setCampos] = useState({
     title: '', address: '', phone: '', rating: '', website: '',
+    nicho: nicho || '', cidade: cidade || '',
   })
   const [erro, setErro] = useState(null)
   const [salvando, setSalvando] = useState(false)
@@ -16,11 +17,24 @@ function FormNovoLead({ nicho, cidade, onSucesso }) {
     setCampos((prev) => ({ ...prev, [campo]: valor }))
   }
 
+  function abrir() {
+    setCampos({
+      title: '', address: '', phone: '', rating: '', website: '',
+      nicho: nicho || '', cidade: cidade || '',
+    })
+    setAberto(true)
+  }
+
   async function handleSalvar() {
     setErro(null)
 
     if (!campos.title.trim() || !campos.address.trim()) {
       setErro('Nome e endereço são obrigatórios.')
+      return
+    }
+
+    if (!campos.nicho.trim() || !campos.cidade.trim()) {
+      setErro('Nicho e cidade são obrigatórios.')
       return
     }
 
@@ -32,16 +46,14 @@ function FormNovoLead({ nicho, cidade, onSucesso }) {
       phone: campos.phone || null,
       rating: campos.rating ? Number(campos.rating) : null,
       website: campos.website || null,
-      nicho,
-      cidade,
+      nicho: campos.nicho,
+      cidade: campos.cidade,
     })
 
     setSalvando(false)
 
     if (resultado.sucesso) {
-      setCampos({ title: '', address: '', phone: '', rating: '', website: '' })
       setAberto(false)
-      if (onSucesso) onSucesso()
     } else {
       setErro(resultado.erro)
     }
@@ -52,7 +64,7 @@ function FormNovoLead({ nicho, cidade, onSucesso }) {
       <Button
         variant="outlined"
         startIcon={<AddIcon />}
-        onClick={() => setAberto(true)}
+        onClick={abrir}
         sx={{
           borderColor: 'rgba(217,224,33,0.4)',
           color: '#D9E021',
@@ -81,6 +93,20 @@ function FormNovoLead({ nicho, cidade, onSucesso }) {
       </Typography>
 
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+        <TextField
+          label="Nicho"
+          value={campos.nicho}
+          onChange={(e) => atualizarCampo('nicho', e.target.value)}
+          sx={{ flex: '1 1 150px' }}
+          size="small"
+        />
+        <TextField
+          label="Cidade"
+          value={campos.cidade}
+          onChange={(e) => atualizarCampo('cidade', e.target.value)}
+          sx={{ flex: '1 1 150px' }}
+          size="small"
+        />
         <TextField
           label="Nome da empresa"
           value={campos.title}
