@@ -31,7 +31,12 @@ async function buscarNaGoogleEPersistir(nicho, cidade, usuario) {
   const response = await fetch(url)
   const data = await response.json()
 
-  if (!data.results || data.results.length === 0) {
+  if (data.status !== 'OK') {
+    log('ERRO_GOOGLE_API', `Status: ${data.status}, Mensagem: ${data.error_message || 'sem detalhes'}`)
+    return []
+  }
+
+  if (data.results.length === 0) {
     return []
   }
 
