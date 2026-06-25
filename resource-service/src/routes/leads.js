@@ -2,6 +2,7 @@ const express = require('express')
 const jwt = require('jsonwebtoken')
 const Lead = require('../models/Lead')
 const { client } = require('../config/redis')
+const log = require('../config/logger')
 
 const router = express.Router()
 
@@ -67,7 +68,7 @@ async function buscarNaGoogleEPersistir(nicho, cidade, usuario) {
 
   // Salva todos no MongoDB de uma vez
   const leadsSalvos = await Lead.insertMany(leadsParaSalvar)
-  console.log(`[resource-service] ${leadsSalvos.length} leads salvos no banco a partir do Google`)
+  log('LEADS_SALVOS', `${leadsSalvos.length} leads inseridos no banco a partir do Google`)
 
   return leadsSalvos
 }
@@ -85,7 +86,7 @@ router.get('/', autenticar, async (req, res) => {
     const cacheKey = `leads:${nicho}:${cidade}`
     const cache = await client.get(cacheKey)
     if (cache) {
-      console.log(`[resource-service] Cache hit: ${cacheKey}`)
+      log('CACHE_HIT', cacheKey)
       return res.status(200).json(JSON.parse(cache))
     }
 
@@ -98,17 +99,17 @@ router.get('/', autenticar, async (req, res) => {
 
     // 3. Se não encontrou nada no banco, busca na Google Places API
     if (leads.length === 0) {
-      console.log(`[resource-service] Nada no banco, buscando na Google Places API...`)
+      log('BUSCA_GOOGLE', `Nicho: ${nicho}, Cidade: ${cidade}`)
       leads = await buscarNaGoogleEPersistir(nicho, cidade, req.usuario)
     }
 
     // 4. Salva no cache por 5 minutos
     await client.setEx(cacheKey, 300, JSON.stringify(leads))
 
-    console.log(`[resource-service] Busca: ${nicho} em ${cidade} — ${leads.length} resultados`)
+    log('BUSCA', `Nicho: ${nicho}, Cidade: ${cidade}, Resultados: ${leads.length}, Usuário: ${req.usuario.username}`)
     res.status(200).json(leads)
   } catch (err) {
-    console.error('[resource-service] Erro na busca:', err.message)
+    log('ERRO_BUSCA', err.message)
     res.status(500).json({ error: 'Erro ao buscar leads.' })
   }
 })
@@ -146,10 +147,10 @@ router.post('/', autenticar, async (req, res) => {
     // Limpa o cache
     await client.del(`leads:${nicho}:${cidade}`)
 
-    console.log(`[resource-service] Lead criado: ${title} por ${req.usuario.username}`)
+    log('LEAD_CRIADO', `${title} por ${req.usuario.username}`)
     res.status(201).json(lead)
   } catch (err) {
-    console.error('[resource-service] Erro ao criar lead:', err.message)
+    log('ERRO_CRIAR', err.message)
     res.status(500).json({ error: 'Erro ao criar lead.' })
   }
 })
@@ -165,6 +166,7 @@ router.put('/:id', autenticar, async (req, res) => {
 
     // Verifica se o usuário é o dono
     if (lead.owner.toString() !== req.usuario.id) {
+      log('ACESSO_NEGADO', `${req.usuario.username} tentou editar lead de outro usuário`)
       return res.status(403).json({ error: 'Você não tem permissão para editar este lead.' })
     }
 
@@ -195,10 +197,10 @@ router.put('/:id', autenticar, async (req, res) => {
     // Limpa o cache
     await client.del(`leads:${lead.nicho}:${lead.cidade}`)
 
-    console.log(`[resource-service] Lead atualizado: ${lead.title} por ${req.usuario.username}`)
+    log('LEAD_ATUALIZADO', `${lead.title} por ${req.usuario.username}`)
     res.status(200).json(lead)
   } catch (err) {
-    console.error('[resource-service] Erro ao atualizar lead:', err.message)
+    log('ERRO_ATUALIZAR', err.message)
     res.status(500).json({ error: 'Erro ao atualizar lead.' })
   }
 })
@@ -214,6 +216,7 @@ router.delete('/:id', autenticar, async (req, res) => {
 
     // Verifica se o usuário é o dono
     if (lead.owner.toString() !== req.usuario.id) {
+      log('ACESSO_NEGADO', `${req.usuario.username} tentou deletar lead de outro usuário`)
       return res.status(403).json({ error: 'Você não tem permissão para deletar este lead.' })
     }
 
@@ -229,10 +232,10 @@ router.delete('/:id', autenticar, async (req, res) => {
     // Limpa o cache
     await client.del(`leads:${lead.nicho}:${lead.cidade}`)
 
-    console.log(`[resource-service] Lead deletado: ${lead.title} por ${req.usuario.username}`)
+    log('LEAD_DELETADO', `${lead.title} por ${req.usuario.username}`)
     res.status(200).json({ message: 'Lead deletado com sucesso.' })
   } catch (err) {
-    console.error('[resource-service] Erro ao deletar lead:', err.message)
+    log('ERRO_DELETAR', err.message)
     res.status(500).json({ error: 'Erro ao deletar lead.' })
   }
 })
