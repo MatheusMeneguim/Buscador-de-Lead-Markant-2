@@ -1,5 +1,6 @@
 import { createContext, useContext, useState } from 'react'
 import { useAuth } from './AuthContext'
+import { useWebSocket } from './useWebSocket'
 
 const LeadContext = createContext(null)
 
@@ -12,6 +13,25 @@ export function LeadProvider({ children }) {
   const [erro, setErro] = useState(null)
   const [buscaAtual, setBuscaAtual] = useState({ nicho: '', cidade: '' })
   const [historico, setHistorico] = useState([])
+
+  // Conecta ao WebSocket e escuta eventos em tempo real
+  useWebSocket((evento) => {
+if (evento.tipo === 'lead.criado') {
+  setLeads((prev) => {
+    const jaExiste = prev.some((l) => String(l._id) === String(evento.lead._id))
+    if (jaExiste) return prev
+    return [evento.lead, ...prev]
+  })
+}
+
+  if (evento.tipo === 'lead.atualizado') {
+    setLeads((prev) => prev.map((l) => (l._id === evento.lead._id ? evento.lead : l)))
+  }
+
+  if (evento.tipo === 'lead.deletado') {
+    setLeads((prev) => prev.filter((l) => l._id !== evento.leadId))
+  }
+})
 
   async function buscar(nicho, cidade) {
     setLoading(true)
@@ -48,29 +68,28 @@ export function LeadProvider({ children }) {
     }
   }
 
-  async function criarLead(dadosLead) {
-    try {
-      const response = await fetch(RESOURCE_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(dadosLead),
-      })
+async function criarLead(dadosLead) {
+  try {
+    const response = await fetch(RESOURCE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(dadosLead),
+    })
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Erro ao criar lead')
-      }
-
-      const novoLead = await response.json()
-      setLeads((prev) => [novoLead, ...prev])
-      return { sucesso: true }
-    } catch (err) {
-      return { sucesso: false, erro: err.message }
+    if (!response.ok) {
+      const data = await response.json()
+      throw new Error(data.error || 'Erro ao criar lead')
     }
+
+    // Não adiciona aqui — o WebSocket vai adicionar quando o evento chegar
+    return { sucesso: true }
+  } catch (err) {
+    return { sucesso: false, erro: err.message }
   }
+}
 
   async function editarLead(id, dadosLead) {
     try {
