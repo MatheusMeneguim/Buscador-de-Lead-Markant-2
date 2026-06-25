@@ -5,8 +5,6 @@ const compression = require('compression')
 const conectarBanco = require('./src/config/db')
 const { conectarRedis } = require('./src/config/redis')
 const leadsRoutes = require('./src/routes/leads')
-const mongoSanitize = require('express-mongo-sanitize')
-const xss = require('xss-clean')
 
 const app = express()
 const PORT = process.env.PORT || 3002
@@ -15,8 +13,25 @@ const PORT = process.env.PORT || 3002
 app.use(cors())
 app.use(compression())
 app.use(express.json())
-app.use(mongoSanitize())
-app.use(xss())
+
+// Sanitização contra NoSQL Injection — remove operadores MongoDB do body
+function sanitizarBody(req, res, next) {
+  function limpar(obj) {
+    if (obj && typeof obj === 'object') {
+      for (const key in obj) {
+        if (key.startsWith('$') || key.includes('.')) {
+          delete obj[key]
+        } else if (typeof obj[key] === 'object') {
+          limpar(obj[key])
+        }
+      }
+    }
+  }
+  limpar(req.body)
+  next()
+}
+
+app.use(sanitizarBody)
 
 // Rotas
 app.use('/leads', leadsRoutes)
