@@ -22,30 +22,90 @@ function autenticar(req, res, next) {
   }
 }
 
+// ─── Busca na Google Places API e salva os resultados no MongoDB ────────────
+async function buscarNaGoogleEPersistir(nicho, cidade, usuario) {
+  const query = `${nicho} em ${cidade} Brasil`
+  const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&language=pt-BR&region=br&key=${process.env.GOOGLE_PLACES_API_KEY}`
+
+  const response = await fetch(url)
+  const data = await response.json()
+
+  if (!data.results || data.results.length === 0) {
+    return []
+  }
+
+  // Busca telefone e site de cada resultado em paralelo
+  const leadsParaSalvar = await Promise.all(
+    data.results.map(async (item) => {
+      let phone = null
+      let website = null
+
+      try {
+        const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${item.place_id}&fields=formatted_phone_number,website&language=pt-BR&key=${process.env.GOOGLE_PLACES_API_KEY}`
+        const detailRes = await fetch(detailUrl)
+        const detailData = await detailRes.json()
+        phone = detailData.result?.formatted_phone_number || null
+        website = detailData.result?.website || null
+      } catch {
+        // Se falhar, deixa null
+      }
+
+      return {
+        title: item.name || 'Sem nome',
+        address: item.formatted_address || 'Endereço não disponível',
+        phone,
+        rating: item.rating || null,
+        reviews: item.user_ratings_total || 0,
+        website,
+        nicho,
+        cidade,
+        owner: usuario.id,
+        ownerUsername: usuario.username,
+      }
+    })
+  )
+
+  // Salva todos no MongoDB de uma vez
+  const leadsSalvos = await Lead.insertMany(leadsParaSalvar)
+  console.log(`[resource-service] ${leadsSalvos.length} leads salvos no banco a partir do Google`)
+
+  return leadsSalvos
+}
+
 // ─── GET /leads — busca leads do usuário ─────────────────────────────────────
 router.get('/', autenticar, async (req, res) => {
   try {
     const { nicho, cidade } = req.query
-    const cacheKey = `leads:${nicho}:${cidade}`
 
-    // Tenta buscar do cache primeiro
+    if (!nicho || !cidade) {
+      return res.status(400).json({ error: 'Nicho e cidade são obrigatórios' })
+    }
+
+    // 1. Tenta buscar do cache Redis primeiro
+    const cacheKey = `leads:${nicho}:${cidade}`
     const cache = await client.get(cacheKey)
     if (cache) {
       console.log(`[resource-service] Cache hit: ${cacheKey}`)
       return res.status(200).json(JSON.parse(cache))
     }
 
-    // Monta o filtro
-    const filtro = {}
-    if (nicho) filtro.nicho = { $regex: nicho, $options: 'i' }
-    if (cidade) filtro.cidade = { $regex: cidade, $options: 'i' }
+    // 2. Busca no banco de dados (já populado anteriormente)
+    const filtro = {
+      nicho: { $regex: nicho, $options: 'i' },
+      cidade: { $regex: cidade, $options: 'i' },
+    }
+    let leads = await Lead.find(filtro).sort({ createdAt: -1 })
 
-    const leads = await Lead.find(filtro).sort({ createdAt: -1 })
+    // 3. Se não encontrou nada no banco, busca na Google Places API
+    if (leads.length === 0) {
+      console.log(`[resource-service] Nada no banco, buscando na Google Places API...`)
+      leads = await buscarNaGoogleEPersistir(nicho, cidade, req.usuario)
+    }
 
-    // Salva no cache por 5 minutos
+    // 4. Salva no cache por 5 minutos
     await client.setEx(cacheKey, 300, JSON.stringify(leads))
 
-    console.log(`[resource-service] Busca: ${nicho} em ${cidade}`)
+    console.log(`[resource-service] Busca: ${nicho} em ${cidade} — ${leads.length} resultados`)
     res.status(200).json(leads)
   } catch (err) {
     console.error('[resource-service] Erro na busca:', err.message)
@@ -108,20 +168,20 @@ router.put('/:id', autenticar, async (req, res) => {
       return res.status(403).json({ error: 'Você não tem permissão para editar este lead.' })
     }
 
-const { title, address, phone, rating, reviews, website, nicho, cidade } = req.body
+    const { title, address, phone, rating, reviews, website, nicho, cidade } = req.body
 
-if (!title || !address) {
-  return res.status(400).json({ error: 'Nome e endereço são obrigatórios.' })
-}
+    if (!title || !address) {
+      return res.status(400).json({ error: 'Nome e endereço são obrigatórios.' })
+    }
 
-lead.title = title
-lead.address = address
-lead.phone = phone || null
-lead.rating = rating || null
-lead.reviews = reviews || 0
-lead.website = website || null
-if (nicho) lead.nicho = nicho
-if (cidade) lead.cidade = cidade
+    lead.title = title
+    lead.address = address
+    lead.phone = phone || null
+    lead.rating = rating || null
+    lead.reviews = reviews || 0
+    lead.website = website || null
+    if (nicho) lead.nicho = nicho
+    if (cidade) lead.cidade = cidade
 
     await lead.save()
 
