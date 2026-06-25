@@ -2,6 +2,7 @@ const express = require('express')
 const jwt = require('jsonwebtoken')
 const rateLimit = require('express-rate-limit')
 const User = require('../models/User')
+const log = require('../config/logger')
 
 const router = express.Router()
 
@@ -28,14 +29,16 @@ router.post('/login', limiteLogin, async (req, res) => {
     // Busca o usuário no banco
     const usuario = await User.findOne({ username })
     if (!usuario) {
-      return res.status(401).json({ error: 'Usuário ou senha inválidos.' })
-    }
+  log('LOGIN_FALHOU', `Usuário não encontrado: ${username}`)
+  return res.status(401).json({ error: 'Usuário ou senha inválidos.' })
+}
 
     // Verifica a senha
     const senhaCorreta = await usuario.compararSenha(password)
     if (!senhaCorreta) {
-      return res.status(401).json({ error: 'Usuário ou senha inválidos.' })
-    }
+  log('LOGIN_FALHOU', `Senha incorreta para: ${username}`)
+  return res.status(401).json({ error: 'Usuário ou senha inválidos.' })
+}
 
     // Gera o token JWT
     const token = jwt.sign(
@@ -44,7 +47,7 @@ router.post('/login', limiteLogin, async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRES_IN }
     )
 
-    console.log(`[auth-service] Login: ${username}`)
+    log('LOGIN', `Usuário: ${username}`)
 
     res.status(200).json({ token, username: usuario.username })
   } catch (err) {
@@ -58,7 +61,7 @@ router.post('/logout', (req, res) => {
   const token = req.headers.authorization?.split(' ')[1]
   if (token) {
     tokensBloqueados.add(token)
-    console.log(`[auth-service] Logout realizado`)
+    log('LOGOUT', `Token invalidado`)
   }
   res.status(200).json({ message: 'Logout realizado com sucesso.' })
 })
