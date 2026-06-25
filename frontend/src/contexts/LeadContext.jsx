@@ -16,22 +16,22 @@ export function LeadProvider({ children }) {
 
   // Conecta ao WebSocket e escuta eventos em tempo real
   useWebSocket((evento) => {
-if (evento.tipo === 'lead.criado') {
-  setLeads((prev) => {
-    const jaExiste = prev.some((l) => String(l._id) === String(evento.lead._id))
-    if (jaExiste) return prev
-    return [evento.lead, ...prev]
+    if (evento.tipo === 'lead.criado') {
+      setLeads((prev) => {
+        const jaExiste = prev.some((l) => String(l._id) === String(evento.lead._id))
+        if (jaExiste) return prev
+        return [evento.lead, ...prev]
+      })
+    }
+
+    if (evento.tipo === 'lead.atualizado') {
+      setLeads((prev) => prev.map((l) => (String(l._id) === String(evento.lead._id) ? evento.lead : l)))
+    }
+
+    if (evento.tipo === 'lead.deletado') {
+      setLeads((prev) => prev.filter((l) => String(l._id) !== String(evento.leadId)))
+    }
   })
-}
-
-  if (evento.tipo === 'lead.atualizado') {
-    setLeads((prev) => prev.map((l) => (l._id === evento.lead._id ? evento.lead : l)))
-  }
-
-  if (evento.tipo === 'lead.deletado') {
-    setLeads((prev) => prev.filter((l) => l._id !== evento.leadId))
-  }
-})
 
   async function buscar(nicho, cidade) {
     setLoading(true)
@@ -68,28 +68,28 @@ if (evento.tipo === 'lead.criado') {
     }
   }
 
-async function criarLead(dadosLead) {
-  try {
-    const response = await fetch(RESOURCE_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(dadosLead),
-    })
+  async function criarLead(dadosLead) {
+    try {
+      const response = await fetch(RESOURCE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(dadosLead),
+      })
 
-    if (!response.ok) {
-      const data = await response.json()
-      throw new Error(data.error || 'Erro ao criar lead')
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Erro ao criar lead')
+      }
+
+      // Não adiciona aqui — o WebSocket vai adicionar quando o evento chegar
+      return { sucesso: true }
+    } catch (err) {
+      return { sucesso: false, erro: err.message }
     }
-
-    // Não adiciona aqui — o WebSocket vai adicionar quando o evento chegar
-    return { sucesso: true }
-  } catch (err) {
-    return { sucesso: false, erro: err.message }
   }
-}
 
   async function editarLead(id, dadosLead) {
     try {
@@ -107,8 +107,7 @@ async function criarLead(dadosLead) {
         throw new Error(data.error || 'Erro ao editar lead')
       }
 
-      const leadAtualizado = await response.json()
-      setLeads((prev) => prev.map((l) => (l._id === id ? leadAtualizado : l)))
+      // Não atualiza aqui — o WebSocket vai atualizar quando o evento chegar
       return { sucesso: true }
     } catch (err) {
       return { sucesso: false, erro: err.message }
@@ -127,26 +126,11 @@ async function criarLead(dadosLead) {
         throw new Error(data.error || 'Erro ao deletar lead')
       }
 
-      setLeads((prev) => prev.filter((l) => l._id !== id))
+      // Não remove aqui — o WebSocket vai remover quando o evento chegar
       return { sucesso: true }
     } catch (err) {
       return { sucesso: false, erro: err.message }
     }
-  }
-
-  // Atualiza um lead na tela quando chega notificação via WebSocket
-  function atualizarLeadLocal(lead) {
-    setLeads((prev) => {
-      const existe = prev.some((l) => l._id === lead._id)
-      if (existe) {
-        return prev.map((l) => (l._id === lead._id ? lead : l))
-      }
-      return prev
-    })
-  }
-
-  function removerLeadLocal(leadId) {
-    setLeads((prev) => prev.filter((l) => l._id !== leadId))
   }
 
   return (
@@ -161,8 +145,6 @@ async function criarLead(dadosLead) {
         criarLead,
         editarLead,
         deletarLead,
-        atualizarLeadLocal,
-        removerLeadLocal,
       }}
     >
       {children}
