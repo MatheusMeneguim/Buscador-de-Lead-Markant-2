@@ -1,6 +1,6 @@
 # Buscador de Leads Qualificados — Projeto 2
 
-Aplicação fullstack distribuída desenvolvida para a disciplina de Programação Web Fullstack (UTFPR — Campus Cornélio Procópio), estendendo o Projeto 1 com uma arquitetura de microsserviços.
+Aplicação fullstack distribuída desenvolvida para a disciplina de Programação Web Fullstack (UTFPR — Campus Cornélio Procópio), estendendo o [Projeto 1](https://github.com/MatheusMeneguim/Buscador-de-Lead-Markant) com uma arquitetura de microsserviços.
 
 Ferramenta real da [Markant Growth Marketing](https://markant.com.br) para prospecção de leads B2B via Google Places API, com persistência própria, autenticação JWT e notificações em tempo real.
 
@@ -232,7 +232,7 @@ projeto/
 
 **Matheus F. Meneguim**
 Fundador & Head of Growth — [Markant Growth Marketing](https://markant.com.br)
-Estudante de Tecnologia da Informação — UTFPR Campus Cornélio Procópio
+Estudante de Análise e Desenvolvimento de Sistemas — UTFPR Campus Cornélio Procópio
 
 Disciplina: Programação Web Fullstack
 Prof. Anderson Paulo Avila Santos
