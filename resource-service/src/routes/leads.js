@@ -108,18 +108,20 @@ router.put('/:id', autenticar, async (req, res) => {
       return res.status(403).json({ error: 'Você não tem permissão para editar este lead.' })
     }
 
-    const { title, address, phone, rating, reviews, website } = req.body
+const { title, address, phone, rating, reviews, website, nicho, cidade } = req.body
 
-    if (!title || !address) {
-      return res.status(400).json({ error: 'Nome e endereço são obrigatórios.' })
-    }
+if (!title || !address) {
+  return res.status(400).json({ error: 'Nome e endereço são obrigatórios.' })
+}
 
-    lead.title = title
-    lead.address = address
-    lead.phone = phone || null
-    lead.rating = rating || null
-    lead.reviews = reviews || 0
-    lead.website = website || null
+lead.title = title
+lead.address = address
+lead.phone = phone || null
+lead.rating = rating || null
+lead.reviews = reviews || 0
+lead.website = website || null
+if (nicho) lead.nicho = nicho
+if (cidade) lead.cidade = cidade
 
     await lead.save()
 

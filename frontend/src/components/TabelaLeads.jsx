@@ -12,12 +12,10 @@ function TabelaLeads() {
   const { leads, loading, buscaAtual, editarLead, deletarLead } = useLeads()
   const [filtroAvaliacao, setFiltroAvaliacao] = useState(0)
 
-  // Estado do dialog de edição
   const [leadEditando, setLeadEditando] = useState(null)
   const [campos, setCampos] = useState({})
   const [erroEdicao, setErroEdicao] = useState(null)
 
-  // Estado do dialog de confirmação de exclusão
   const [leadDeletando, setLeadDeletando] = useState(null)
 
   const leadsFiltrados = useMemo(() => {
@@ -33,6 +31,8 @@ function TabelaLeads() {
       phone: lead.phone || '',
       rating: lead.rating || '',
       website: lead.website || '',
+      nicho: lead.nicho || '',
+      cidade: lead.cidade || '',
     })
     setErroEdicao(null)
   }
@@ -49,6 +49,8 @@ function TabelaLeads() {
       phone: campos.phone || null,
       rating: campos.rating ? Number(campos.rating) : null,
       website: campos.website || null,
+      nicho: campos.nicho,
+      cidade: campos.cidade,
     })
 
     if (resultado.sucesso) {
@@ -155,6 +157,10 @@ function TabelaLeads() {
         <DialogTitle>Editar Lead</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField label="Nicho" value={campos.nicho || ''} onChange={(e) => setCampos((p) => ({ ...p, nicho: e.target.value }))} fullWidth size="small" />
+              <TextField label="Cidade" value={campos.cidade || ''} onChange={(e) => setCampos((p) => ({ ...p, cidade: e.target.value }))} fullWidth size="small" />
+            </Box>
             <TextField label="Nome" value={campos.title || ''} onChange={(e) => setCampos((p) => ({ ...p, title: e.target.value }))} fullWidth size="small" />
             <TextField label="Endereço" value={campos.address || ''} onChange={(e) => setCampos((p) => ({ ...p, address: e.target.value }))} fullWidth size="small" />
             <TextField label="Telefone" value={campos.phone || ''} onChange={(e) => setCampos((p) => ({ ...p, phone: e.target.value }))} fullWidth size="small" />
